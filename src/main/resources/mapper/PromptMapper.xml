@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.contract.management.infrastructure.mapper.PromptMapper">
+
+    <!-- 复杂条件分页查询 -->
+    <select id="selectByFilters" resultType="com.contract.management.infrastructure.entity.PromptEntity">
+        SELECT * FROM prompt
+        <where>
+            <if test="promptType != null and promptType != ''">
+                AND prompt_type = #{promptType}
+            </if>
+            <if test="promptRole != null and promptRole != ''">
+                AND prompt_role = #{promptRole}
+            </if>
+            <if test="enabled != null">
+                AND enabled = #{enabled}
+            </if>
+            <if test="responseFormat != null and responseFormat != ''">
+                AND response_format = #{responseFormat}
+            </if>
+            <if test="createdBy != null">
+                AND created_by = #{createdBy}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (prompt_name ILIKE CONCAT('%', #{keyword}, '%') OR remark ILIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="startTimeStart != null">
+                AND created_time >= #{startTimeStart}
+            </if>
+            <if test="startTimeEnd != null">
+                AND created_time &lt;= #{startTimeEnd}
+            </if>
+            <if test="updateTimeStart != null">
+                AND updated_time >= #{updateTimeStart}
+            </if>
+            <if test="updateTimeEnd != null">
+                AND updated_time &lt;= #{updateTimeEnd}
+            </if>
+        </where>
+        ORDER BY created_time DESC
+    </select>
+
+</mapper>

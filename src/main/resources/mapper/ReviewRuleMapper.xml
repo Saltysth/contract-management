@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.contract.management.infrastructure.mapper.ReviewRuleMapper">
+
+    <!-- 根据条件分页查询规则 -->
+    <select id="selectByConditions" resultType="com.contract.management.infrastructure.entity.ReviewRuleEntity">
+        SELECT * FROM contract_review_rule
+        <where>
+            <if test="ruleName != null and ruleName != ''">
+                AND rule_name ILIKE CONCAT('%', #{ruleName}, '%')
+            </if>
+            <if test="ruleType != null and ruleType != ''">
+                AND rule_type = #{ruleType}
+            </if>
+            <if test="enabled != null">
+                AND enabled = #{enabled}
+            </if>
+            <if test="promptModeCode != null">
+                AND prompt_mode_code = #{promptModeCode}
+            </if>
+            <if test="contractType != null and contractType != ''">
+                AND (#{contractType} = ANY(applicable_contract_type) OR 'all' = ANY(applicable_contract_type))
+            </if>
+            <if test="clauseType != null and clauseType != ''">
+                AND #{clauseType} = ANY(applicable_clause_type)
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 插入审查规则 -->
+    <insert id="insert" parameterType="com.contract.management.infrastructure.entity.ReviewRuleEntity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO contract_review_rule
+        ( rule_name, rule_type, applicable_contract_type, applicable_clause_type, rule_content, prompt_mode_code, enabled, create_time, update_time, remark )
+        VALUES
+        ( #{ruleName},
+          #{ruleType, typeHandler=com.contract.management.infrastructure.handler.RuleTypeHandler},
+          #{applicableContractType, typeHandler=com.contract.management.infrastructure.handler.ApplicableContractTypesHandler},
+          #{applicableClauseType, typeHandler=com.contract.management.infrastructure.handler.ApplicableClauseTypesHandler},
+          #{ruleContent},
+          #{promptModeCode},
+          #{enabled},
+          #{createTime},
+          #{updateTime},
+          #{remark} )
+    </insert>
+
+
+    <select id="existsByRuleName" resultType="java.lang.Boolean">
+        SELECT COUNT(*) > 0
+        FROM contract_review_rule
+        WHERE rule_name = #{ruleName}
+          <if test="excludeId != null">
+              AND id != #{excludeId}
+          </if>
+    </select>
+</mapper>

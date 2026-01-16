@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.contract.management.infrastructure.mapper.ClauseMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="ClauseEntityResultMap" type="com.contract.management.infrastructure.entity.ClauseEntity">
+        <id column="id" property="id"/>
+        <result column="extraction_task_id" property="extractionTaskId"/>
+        <result column="contract_id" property="contractId"/>
+        <result column="clause_type" property="clauseType"/>
+        <result column="clause_title" property="clauseTitle"/>
+        <result column="clause_content" property="clauseContent"/>
+        <result column="clause_position" property="clausePosition"/>
+        <result column="confidence_score" property="confidenceScore"/>
+        <result column="extracted_entities" property="extractedEntities"/>
+        <result column="risk_level" property="riskLevel"/>
+        <result column="risk_factors" property="riskFactors"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="object_version_number" property="objectVersionNumber"/>
+        <result column="is_deleted" property="isDeleted"/>
+    </resultMap>
+
+    <!-- 基础查询字段 -->
+    <sql id="Base_Column_List">
+        id, extraction_task_id, contract_id, clause_type, clause_title, clause_content,
+        clause_position, confidence_score, extracted_entities, risk_level, risk_factors,
+        created_time, object_version_number, is_deleted
+    </sql>
+
+    <!-- 复杂条件分页查询 -->
+    <select id="selectByFilters" resultMap="ClauseEntityResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM clause
+        <where>
+            is_deleted = false
+            <if test="extractionTaskId != null">
+                AND extraction_task_id = #{extractionTaskId}
+            </if>
+            <if test="contractId != null">
+                AND contract_id = #{contractId}
+            </if>
+            <if test="clauseType != null and clauseType != ''">
+                AND clause_type = #{clauseType}
+            </if>
+            <if test="riskLevel != null and riskLevel != ''">
+                AND risk_level = #{riskLevel}
+            </if>
+            <if test="titleKeyword != null and titleKeyword != ''">
+                AND clause_title ILIKE CONCAT('%', #{titleKeyword}, '%')
+            </if>
+            <if test="contentKeyword != null and contentKeyword != ''">
+                AND clause_content ILIKE CONCAT('%', #{contentKeyword}, '%')
+            </if>
+            <if test="minConfidenceScore != null">
+                AND confidence_score &gt;= #{minConfidenceScore}
+            </if>
+            <if test="maxConfidenceScore != null">
+                AND confidence_score &lt;= #{maxConfidenceScore}
+            </if>
+            <if test="highRiskOnly != null and highRiskOnly == true">
+                AND risk_level IN ('HIGH', 'CRITICAL')
+            </if>
+            <if test="hasRiskFactorsOnly != null and hasRiskFactorsOnly == true">
+                AND risk_factors IS NOT NULL AND risk_factors != ''
+            </if>
+            <if test="createdTimeStart != null">
+                AND created_time &gt;= #{createdTimeStart}
+            </if>
+            <if test="createdTimeEnd != null">
+                AND created_time &lt;= #{createdTimeEnd}
+            </if>
+            <if test="createdBy != null">
+                <!-- 这里假设有created_by字段，如果实际没有可以删除 -->
+                <!-- AND created_by = #{createdBy} -->
+            </if>
+        </where>
+        ORDER BY created_time DESC
+    </select>
+
+</mapper>

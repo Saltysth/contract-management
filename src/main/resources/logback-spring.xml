@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds">
+    <!-- 基础属性 -->
+    <property name="APP_NAME" value="contract-management"/>
+    <property name="LOG_PATH" value="logs"/>
+    <property name="CONSOLE_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"/>
+    <property name="FILE_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <!-- 控制台输出 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 滚动文件输出：大小 + 时间滚动 -->
+    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}.log</file>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 按天目录，文件按大小切分 -->
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>50MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- 业务与SQL相关日志级别 -->
+    <logger name="com.contract.management" level="DEBUG" additivity="true"/>
+    <logger name="com.contract.management.infrastructure.mapper" level="INFO" additivity="true"/>
+
+    <!-- MyBatis / MyBatis-Plus / Spring JDBC SQL 日志 -->
+    <logger name="org.mybatis" level="INFO"/>
+    <logger name="org.apache.ibatis" level="INFO"/>
+    <logger name="com.baomidou.mybatisplus" level="INFO"/>
+    <logger name="com.baomidou.mybatisplus.core" level="INFO"/>
+    <logger name="org.springframework.jdbc.core" level="INFO"/>
+    <logger name="org.springframework.transaction" level="INFO"/>
+
+    <!-- 其它常见组件 -->
+    <logger name="org.springframework.amqp" level="DEBUG"/>
+
+    <!-- 全局 root 日志级别 -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ROLLING_FILE"/>
+    </root>
+</configuration>

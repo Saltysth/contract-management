@@ -1,0 +1,262 @@
+server:
+  port: 11000
+  servlet:
+    context-path: /contract-management
+    session:
+      timeout: 10m
+feign:
+  client:
+    config:
+      default:  # 全局配置（对所有 Feign 客户端生效）
+        connect-timeout: 5000  # 连接超时（建立连接的超时时间，单位：毫秒）
+        read-timeout: 30000    # 读取超时（等待服务响应的超时时间，根据接口实际耗时调整，如 30 秒）
+      contract-ai-service:  # 针对特定服务的配置（优先级高于全局）
+        read-timeout: 300000  # 若该服务接口耗时更长，单独设置
+
+
+# 管理端点配置
+management:
+  server:
+    port: 11001
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+    cors:
+      allowed-origins: "*"
+      allowed-methods: GET,POST
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  health:
+    defaults:
+      enabled: true
+    db:
+      enabled: true
+    redis:
+      enabled: true
+    rabbit:
+      enabled: true
+    diskspace:
+      enabled: true
+      threshold: 100MB
+    ldap:
+      enabled: false
+    neo4j:
+      enabled: false
+    elasticsearch:
+      enabled: false
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+spring:
+  application:
+    name: contract-management-service
+  main:
+    web-application-type: servlet
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER:localhost:18848}
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:your-nacos-password}
+
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:18848}
+        namespace: ${NACOS_NAMESPACE:public}
+        group: CONTRACT_REVIEW
+        enabled: true
+        heart-beat:
+          enabled: true
+          interval: 5000
+          timeout: 15000
+        metadata:
+          management:
+            context-path: /actuator
+          health:
+            check-url: http://${spring.cloud.client.ip-address}:${management.server.port}/actuator/health
+
+      config:
+        namespace: ${NACOS_NAMESPACE:public}
+        group: CONTRACT_REVIEW
+        file-extension: yml
+        # 配置文件名格式: ${spring.application.name}-${spring.profiles.active}.${file-extension}
+        # 例如: file-storage-service-dev.yml
+
+  # 数据库配置
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:your-db-password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+
+
+  # Flyway配置 - 集中管理所有数据库迁移
+  flyway:
+    enabled: true
+    locations:
+      - classpath:db/migration
+      - classpath:db/migration/file-storage
+    baseline-on-migrate: false
+    validate-on-migrate: true
+
+  # Redis配置
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+
+  # RabbitMQ配置
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    connection-timeout: 15000
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
+          multiplier: 2
+
+  # 缓存配置
+  cache:
+    type: redis
+    redis:
+      time-to-live: 1800000  # 30分钟
+      cache-null-values: false
+
+  mvc:
+    async:
+      request-timeout: 300000  # 5分钟，与Feign超时时间一致
+  profiles:
+    active: test
+
+
+#logging:
+#  level:
+#    org.springframework.boot.autoconfigure: DEBUG
+#    org.springframework.boot.autoconfigure.condition: TRACE
+
+
+# 日志配置
+# MyBatis Plus配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: isDeleted
+      logic-delete-value: true
+      logic-not-delete-value: false
+      update-strategy: not_null
+      insert-strategy: not_null
+    banner: false
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.contract.management.infrastructure.entity
+  type-handlers-package: com.contract.management.infrastructure.handler
+
+
+
+# 应用自定义配置
+contract:
+  cache:
+    contract-detail-ttl: 1800  # 合同详情缓存30分钟
+    contract-list-ttl: 600     # 合同列表缓存10分钟
+    contract-stats-ttl: 3600   # 合同统计缓存1小时
+    tags-ttl: 7200             # 标签缓存2小时
+
+# 文件下载配置
+file:
+  download:
+    type: cos
+    local:
+      image-base-url: ${IMAGE_BASE_URL:https://your-image-server.com/load_image/}
+    cos:
+      secret-id: ${COS_SECRET_ID:your-cos-secret-id}
+      secret-key: ${COS_SECRET_KEY:your-cos-secret-key}
+      region: ${COS_REGION:ap-shanghai}
+
+# Resilience4j配置
+resilience4j:
+  circuitbreaker:
+    instances:
+      reviewEngine:
+        register-health-indicator: true
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 30s
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 2s
+      fileStorage:
+        register-health-indicator: true
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 30s
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 5s
+  
+  retry:
+    instances:
+      reviewEngine:
+        max-attempts: 3
+        wait-duration: 1s
+        exponential-backoff-multiplier: 2
+      fileStorage:
+        max-attempts: 3
+        wait-duration: 1s
+        exponential-backoff-multiplier: 2
+
+# OpenAPI文档配置
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+  info:
+    title: Contract Management API
+    description: 合同管理模块API文档
+    version: 1.0.0
+    contact:
+      name: ContractReview Team
+      email: 1432488520@qq.com
+
+ruoyi:
+  remote-auth:
+    secret: ${JWT_SECRET:your-jwt-secret-key}
